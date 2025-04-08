@@ -35,7 +35,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     res.status(200).json({ result: data.choices[0].message.content });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Request error:', error);
     res.status(500).json({ error: 'Server error' });
   }
