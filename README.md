@@ -18,3 +18,5 @@ A simple AI-powered web app that allows users to input a list of ingredients and
 - Vercel (deployment platform)
 
 ## Demo
+- https://ai-recipe-generator-omega.vercel.app/
+- password protected
