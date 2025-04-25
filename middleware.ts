@@ -1,9 +1,9 @@
 // middleware.ts
 
-// import { NextResponse } from 'next/server';
-// import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
-// export function middleware(req: NextRequest) {
+export function middleware(req: NextRequest) {
 //   const auth = req.headers.get('authorization');
 
 //   const basicAuth = auth?.split(' ')[1];
@@ -22,8 +22,9 @@
 //       'WWW-Authenticate': 'Basic realm="Secure Area"',
 //     },
 //   });
-// }
+    return NextResponse.next()
+}
 
-// export const config = {
-//   matcher: ['/((?!_next/static|favicon.ico).*)'], // Protect all routes except static files
-// };
+export const config = {
+  matcher: ['/((?!_next/static|favicon.ico).*)'], // Protect all routes except static files
+};
