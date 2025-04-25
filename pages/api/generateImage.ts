@@ -49,18 +49,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         n: 1,
         size: '512x512',
       }),
-    })
-
-    const data = await response.json()
-
-    if (!data.data || !data.data[0]?.url) {
-      console.error('DALL·E response:', data)
-      return res.status(500).json({ error: 'No image returned from DALL·E' })
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text(); // safely read error message
+      console.error('OpenAI error response:', errorText);
+      return res.status(response.status).json({ error: 'OpenAI image generation failed.' });
     }
-
-    res.status(200).json({ imageUrl: data.data[0].url })
+    
+    const data = await response.json();
+    
+    if (!data.data || !data.data[0]?.url) {
+      console.error('DALL·E response:', data);
+      return res.status(500).json({ error: 'No image returned from DALL·E' });
+    }
+    
+    res.status(200).json({ imageUrl: data.data[0].url });
+    
   } catch (error: unknown) {
-    console.error('Image generation error:', error)
-    res.status(500).json({ error: 'Server error' })
+    console.error('Image generation error:', error);
+  
+    return res.status(500).json({
+      error: 'An error occurred while generating the image.',
+    });
   }
 }
