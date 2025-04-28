@@ -26,7 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (ipCount === 1) await redis.expire(ipKey, 86400)
     if (globalCount === 1) await redis.expire(globalKey, 86400)
 
-    if (ipCount > 5) {
+    if (ipCount > 3) {
       return res
         .status(429)
         .json({ error: 'You have reached your daily limit (2 images per IP).' })
@@ -50,12 +50,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         size: '512x512',
       }),
     });
+    const contentType = response.headers.get('content-type') || '';
     
     if (!response.ok) {
-      const errorText = await response.text(); // safely read error message
+      let errorText = '';
+    
+      if (contentType.includes('application/json')) {
+        const errorData = await response.json();
+        errorText = errorData?.error?.message || 'OpenAI API error';
+      } else {
+        errorText = await response.text(); // fallback to raw text
+      }
+    
       console.error('OpenAI error response:', errorText);
-      return res.status(response.status).json({ error: 'OpenAI image generation failed.' });
+      return res.status(response.status).json({ error: errorText });
     }
+    
+    // if (!response.ok) {
+    //   const errorText = await response.text(); // safely read error message
+    //   console.error('OpenAI error response:', errorText);
+    //   return res.status(response.status).json({ error: 'OpenAI image generation failed.' });
+    // }
     
     const data = await response.json();
     

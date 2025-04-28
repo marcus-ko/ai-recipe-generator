@@ -32,7 +32,7 @@ export default function Home() {
       // If checkbox is checked, generate image
       if (generateImage) {
         const titleMatch = resultText.match(/^(.+?)\n/); // Get first line as title
-        const imagePrompt = titleMatch ? titleMatch[1] : `A dish made with ${ingredients}`;
+        const imagePrompt = titleMatch ? titleMatch[1].trim() : `A dish made with ${ingredients}`;
         console.log("Image Prompt: ", imagePrompt);
         const imageRes = await fetch('/api/generateImage', {
           method: 'POST',

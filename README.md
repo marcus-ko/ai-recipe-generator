@@ -19,4 +19,4 @@ A simple AI-powered web app that allows users to input a list of ingredients and
 
 ## Demo
 - https://ai-recipe-generator-omega.vercel.app/
-- password protected
+- limited to 3 generations per session
