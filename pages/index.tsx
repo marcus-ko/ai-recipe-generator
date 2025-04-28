@@ -33,7 +33,7 @@ export default function Home() {
       if (generateImage) {
         const titleMatch = resultText.match(/^(.+?)\n/); // Get first line as title
         const imagePrompt = titleMatch ? titleMatch[1] : `A dish made with ${ingredients}`;
-
+        console.log("Image Prompt: ", imagePrompt);
         const imageRes = await fetch('/api/generateImage', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -51,6 +51,8 @@ export default function Home() {
       } else {
         setError('An unknown error occurred.');
       }
+    } finally {
+      setLoading(false);
     }
   };
 
