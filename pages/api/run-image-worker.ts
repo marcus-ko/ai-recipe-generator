@@ -11,7 +11,7 @@ export default async function handler(_: NextApiRequest, res: NextApiResponse) {
 
     for (const key of keys) {
       const job = await redis.hgetall(key)
-      if (job.status !== 'pending') continue
+      if (!job || job.status !== 'pending') continue
       if (!job.prompt || typeof job.prompt !== 'string') {
         await redis.hset(key, { status: 'error', error: 'Invalid or missing prompt' })
         continue
