@@ -34,15 +34,27 @@ export default function Home() {
         const titleMatch = resultText.match(/^(.+?)\n/); // Get first line as title
         const imagePrompt = titleMatch ? titleMatch[1].trim() : `A dish made with ${ingredients}`;
         console.log("Image Prompt: ", imagePrompt);
+
         const imageRes = await fetch('/api/generateImage', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ prompt: imagePrompt }),
         });
-
-        const imageData = await imageRes.json();
-        if (!imageRes.ok) throw new Error(imageData.error || 'Image generation failed');
-
+        
+        let imageData;
+        
+        try {
+          imageData = await imageRes.json();
+        } catch (err) {
+          const fallbackText = await imageRes.text();
+          console.error('Failed to parse JSON. Raw response:', fallbackText);
+          throw new Error(`Image API returned invalid JSON: ${fallbackText}`);
+        }
+        
+        if (!imageRes.ok) {
+          throw new Error(imageData?.error || 'Image generation failed');
+        }
+        
         setImageUrl(imageData.imageUrl);
       }
     } catch (err: unknown) {
