@@ -11,7 +11,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // 🧠 Validate prompt
   if (!prompt || typeof prompt !== 'string' || prompt.trim() === '') {
-    console.error('❌ Invalid prompt received:', prompt);
+    console.error('Invalid prompt received:', prompt);
     return res.status(400).json({ error: 'Prompt is required and must be a non-empty string.' });
   }
 
@@ -57,4 +57,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }),
     });
 
-    const contentType
+    const contentType = response.headers.get('content-type') || '';
+
+    if (!response.ok) {
+      let errorText = '';
+
+      if (contentType.includes('application/json')) {
+        const errorData = await response.json();
+        errorText = errorData?.error?.message || 'OpenAI API error';
+      } else {
+        errorText = await response.text();
+      }
+
+      console.error('OpenAI error response:', errorText);
+      return res.status(response.status).json({ error: errorText });
+    }
+
+    const data = await response.json();
+
+    if (!data.data || !data.data[0]?.url) {
+      console.error('No image returned from OpenAI:', data);
+      return res.status(500).json({ error: 'No image returned from OpenAI' });
+    }
+
+    return res.status(200).json({ imageUrl: data.data[0].url });
+
+  } catch (error: unknown) {
+    console.error('Image generation error:', error);
+    return res.status(500).json({ error: 'An error occurred while generating the image.' });
+  }
+}
