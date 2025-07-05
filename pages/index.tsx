@@ -47,6 +47,7 @@ export default function Home() {
           imageData = await imageRes.json();
         } catch (err) {
           const fallbackText = await imageRes.text();
+          console.error('Failed to parse JSON:', err);
           console.error('Failed to parse JSON. Raw response:', fallbackText);
           throw new Error(`Image API returned invalid JSON: ${fallbackText}`);
         }
