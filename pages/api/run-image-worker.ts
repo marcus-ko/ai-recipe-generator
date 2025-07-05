@@ -39,5 +39,25 @@ export default async function handler(_: NextApiRequest, res: NextApiResponse) {
     }
   }
 
+  const controller = new AbortController()
+const timeout = setTimeout(() => controller.abort(), 9000)
+
+const response = await fetch('https://api.openai.com/v1/images/generations', {
+  method: 'POST',
+  headers: {
+    Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    prompt: job.prompt,
+    n: 1,
+    size: '512x512',
+  }),
+  signal: controller.signal,
+})
+
+clearTimeout(timeout)
+
+
   return res.status(200).json({ processed: keys.length })
 }
