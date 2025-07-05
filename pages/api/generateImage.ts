@@ -1,4 +1,3 @@
-// pages/api/generateImage.ts
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { Redis } from '@upstash/redis'
 
@@ -9,10 +8,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { prompt } = req.body
 
-  // 🧠 Validate prompt
+  // ✅ Validate prompt
   if (!prompt || typeof prompt !== 'string' || prompt.trim() === '') {
-    console.error('Invalid prompt received:', prompt);
-    return res.status(400).json({ error: 'Prompt is required and must be a non-empty string.' });
+    console.error('Invalid prompt received:', prompt)
+    return res.status(400).json({ error: 'Prompt is required and must be a non-empty string.' })
   }
 
   const ip =
@@ -24,6 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const globalKey = 'rate:global'
 
   try {
+    // ✅ Rate limiting via Upstash Redis
     const [ipCount, globalCount] = await Promise.all([
       redis.incr(ipKey),
       redis.incr(globalKey),
@@ -32,17 +32,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (ipCount === 1) await redis.expire(ipKey, 86400)
     if (globalCount === 1) await redis.expire(globalKey, 86400)
 
-    if (ipCount > 20) {
-      return res
-        .status(429)
-        .json({ error: 'You have reached your daily limit (2 images per IP).' })
+    if (ipCount > 19) {
+      return res.status(429).json({ error: 'You have reached your daily limit (20 images per IP).' })
     }
 
-    if (globalCount > 20) {
-      return res
-        .status(429)
-        .json({ error: 'Global image generation limit reached. Try again tomorrow.' })
+    if (globalCount > 19) {
+      return res.status(429).json({ error: 'Global image generation limit reached. Try again tomorrow.' })
     }
+
+    // ✅ Image generation with timeout (9s max to avoid Vercel 10s limit)
+    console.time('openai-image')
+
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 9000)
 
     const response = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
@@ -55,35 +57,51 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         n: 1,
         size: '512x512',
       }),
-    });
+      signal: controller.signal,
+    })
 
-    const contentType = response.headers.get('content-type') || '';
+    clearTimeout(timeout)
+    console.timeEnd('openai-image')
+
+    const contentType = response.headers.get('content-type') || ''
+    let imageData
+
+    try {
+      imageData = await response.clone().json()
+    } catch (err) {
+      const fallbackText = await response.text()
+      console.error('Failed to parse JSON from OpenAI:', fallbackText)
+      return res.status(response.status).json({
+        error: `Image API returned invalid JSON: ${fallbackText}`,
+      })
+    }
 
     if (!response.ok) {
-      let errorText = '';
-
-      if (contentType.includes('application/json')) {
-        const errorData = await response.json();
-        errorText = errorData?.error?.message || 'OpenAI API error';
-      } else {
-        errorText = await response.text();
-      }
-
-      console.error('OpenAI error response:', errorText);
-      return res.status(response.status).json({ error: errorText });
+      const errorText = imageData?.error?.message || 'Unknown error from OpenAI'
+      console.error('OpenAI error response:', errorText)
+      return res.status(response.status).json({ error: errorText })
     }
 
-    const data = await response.json();
+    const imageUrl = imageData?.data?.[0]?.url
 
-    if (!data.data || !data.data[0]?.url) {
-      console.error('No image returned from OpenAI:', data);
-      return res.status(500).json({ error: 'No image returned from OpenAI' });
+    if (!imageUrl) {
+      console.error('No image returned from OpenAI:', imageData)
+      return res.status(500).json({ error: 'No image returned from OpenAI' })
     }
 
-    return res.status(200).json({ imageUrl: data.data[0].url });
-
+    return res.status(200).json({ imageUrl })
   } catch (error: unknown) {
-    console.error('Image generation error:', error);
-    return res.status(500).json({ error: 'An error occurred while generating the image.' });
+    console.error('Image generation error:', error)
+
+    const isAbort = (error as any)?.name === 'AbortError'
+    if (isAbort) {
+      return res.status(504).json({
+        error: 'Image generation took too long. Please try again.',
+      })
+    }
+
+    return res.status(500).json({
+      error: 'An error occurred while generating the image.',
+    })
   }
 }
