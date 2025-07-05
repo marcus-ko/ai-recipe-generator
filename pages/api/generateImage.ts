@@ -63,13 +63,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     clearTimeout(timeout)
     console.timeEnd('openai-image')
 
-    const contentType = response.headers.get('content-type') || ''
     let imageData
 
     try {
       imageData = await response.clone().json()
     } catch (err) {
       const fallbackText = await response.text()
+      console.error('Error parsing JSON:', err);
       console.error('Failed to parse JSON from OpenAI:', fallbackText)
       return res.status(response.status).json({
         error: `Image API returned invalid JSON: ${fallbackText}`,
@@ -93,12 +93,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } catch (error: unknown) {
     console.error('Image generation error:', error)
 
-    const isAbort = (error as any)?.name === 'AbortError'
-    if (isAbort) {
-      return res.status(504).json({
-        error: 'Image generation took too long. Please try again.',
-      })
+    if (error instanceof Error && error.name === 'AbortError') {
+      return res.status(504).json({ error: 'Image generation took too long. Please try again.' });
     }
+    
 
     return res.status(500).json({
       error: 'An error occurred while generating the image.',
