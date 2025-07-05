@@ -42,19 +42,20 @@ export default function Home() {
         });
         
         let imageData;
-        
+
         try {
-          imageData = await imageRes.json();
+          imageData = await imageRes.clone().json(); // 👈 clone() allows body to be read again
         } catch (err) {
           const fallbackText = await imageRes.text();
           console.error('Failed to parse JSON:', err);
-          console.error('Failed to parse JSON. Raw response:', fallbackText);
+          console.error('Raw response body:', fallbackText);
           throw new Error(`Image API returned invalid JSON: ${fallbackText}`);
         }
-        
+
         if (!imageRes.ok) {
           throw new Error(imageData?.error || 'Image generation failed');
         }
+
         
         setImageUrl(imageData.imageUrl);
       }
