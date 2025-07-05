@@ -1,8 +1,0 @@
-{
-  "cron": [
-    {
-      "path": "/api/run-image-worker",
-      "schedule": "*/2 * * * *"
-    }
-  ]
-}
