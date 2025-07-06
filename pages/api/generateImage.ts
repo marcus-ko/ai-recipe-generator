@@ -1,3 +1,4 @@
+// pages/api/generateImage.ts
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { Redis } from '@upstash/redis'
 
@@ -8,9 +9,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { prompt } = req.body
 
-  // ✅ Validate prompt
   if (!prompt || typeof prompt !== 'string' || prompt.trim() === '') {
-    console.error('Invalid prompt received:', prompt)
     return res.status(400).json({ error: 'Prompt is required and must be a non-empty string.' })
   }
 
@@ -23,7 +22,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const globalKey = 'rate:global'
 
   try {
-    // ✅ Rate limiting via Upstash Redis
     const [ipCount, globalCount] = await Promise.all([
       redis.incr(ipKey),
       redis.incr(globalKey),
@@ -40,66 +38,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(429).json({ error: 'Global image generation limit reached. Try again tomorrow.' })
     }
 
-    // ✅ Image generation with timeout (9s max to avoid Vercel 10s limit)
-    console.time('openai-image')
-
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 9000)
-
-    const response = await fetch('https://api.openai.com/v1/images/generations', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        prompt,
-        n: 1,
-        size: '512x512',
-      }),
-      signal: controller.signal,
+    const jobId = `image-job:${Date.now()}:${Math.random()}`
+    await redis.hset(jobId, {
+      prompt,
+      status: 'pending',
     })
 
-    clearTimeout(timeout)
-    console.timeEnd('openai-image')
-
-    let imageData
-
-    try {
-      imageData = await response.clone().json()
-    } catch (err) {
-      const fallbackText = await response.text()
-      console.error('Error parsing JSON:', err);
-      console.error('Failed to parse JSON from OpenAI:', fallbackText)
-      return res.status(response.status).json({
-        error: `Image API returned invalid JSON: ${fallbackText}`,
-      })
-    }
-
-    if (!response.ok) {
-      const errorText = imageData?.error?.message || 'Unknown error from OpenAI'
-      console.error('OpenAI error response:', errorText)
-      return res.status(response.status).json({ error: errorText })
-    }
-
-    const imageUrl = imageData?.data?.[0]?.url
-
-    if (!imageUrl) {
-      console.error('No image returned from OpenAI:', imageData)
-      return res.status(500).json({ error: 'No image returned from OpenAI' })
-    }
-
-    return res.status(200).json({ imageUrl })
-  } catch (error: unknown) {
-    console.error('Image generation error:', error)
-
-    if (error instanceof Error && error.name === 'AbortError') {
-      return res.status(504).json({ error: 'Image generation took too long. Please try again.' });
-    }
-    
-
-    return res.status(500).json({
-      error: 'An error occurred while generating the image.',
-    })
+    return res.status(202).json({ jobId })
+  } catch (error) {
+    console.error('Error queuing image job:', error)
+    return res.status(500).json({ error: 'Failed to queue image generation job.' })
   }
 }
