@@ -32,11 +32,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (ipCount === 1) await redis.expire(ipKey, 86400)
     if (globalCount === 1) await redis.expire(globalKey, 86400)
 
-    if (ipCount > 19) {
-      return res.status(429).json({ error: 'You have reached your daily limit (20 images per IP).' })
+    if (ipCount > 3) {
+      return res.status(429).json({ error: 'You have reached your daily limit (3 images per IP).' })
     }
 
-    if (globalCount > 19) {
+    if (globalCount > 3) {
       return res.status(429).json({ error: 'Global image generation limit reached. Try again tomorrow.' })
     }
 
