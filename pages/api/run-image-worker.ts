@@ -27,7 +27,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       try {
         const controller = new AbortController()
-        const timeout = setTimeout(() => controller.abort(), 9000)
+        const timeout = setTimeout(() => controller.abort(), 30000)
 
         const response = await fetch('https://api.openai.com/v1/images/generations', {
           method: 'POST',
