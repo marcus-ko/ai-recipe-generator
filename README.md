@@ -14,9 +14,8 @@ A simple AI-powered web app that allows users to input a list of ingredients and
 - Next.js (React Framework with serverless support)
 - TypeScript
 - OpenAI API (GPT-3.5-turbo for recipes, DALL·E for images)
-- Edge Middleware (for optional password protection)
-- Vercel (deployment platform)
+- Render (deployment platform)
 
 ## Demo
-- https://ai-recipe-generator-omega.vercel.app/
-- limited to 3 generations per session
+- https://ai-recipe-generator-mrb7.onrender.com/
+- limited to 2 generations per session
