@@ -16,52 +16,65 @@ export default function Home() {
     setImageUrl('');
     setError('');
 
-     // Step 1: Generate image first if selected
-     if (generateImage) {
-      const imagePrompt = `A dish made with ${ingredients}`;
-      try {
+    try {
+      // Get recipe from ChatGPT
+      // const recipeRes = await fetch('/api/recipe', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ ingredients }),
+      // });
+
+      // const recipeData = await recipeRes.json();
+      // if (!recipeRes.ok) throw new Error(recipeData.error || 'Recipe generation failed');
+
+      // const resultText = recipeData.result;
+      // setRecipe(resultText);
+
+      const mockedRecipe = `1. Delicious Tuna Melt Sandwich\n\nIngredients:\n- Tuna\n- Cheese\n- Bread\n- Tomato\n- Lettuce\n\nInstructions:\nMix and toast.`;
+      setRecipe(mockedRecipe);
+
+      // If checkbox is checked, generate image
+      if (generateImage) {
+        // const titleMatch = resultText.match(/^(.+?)\n/); // Get first line as title
+        // const imagePrompt = titleMatch ? titleMatch[1].trim() : `A dish made with ${ingredients}`;
+        // console.log("Image Prompt: ", imagePrompt);
+
+        const titleMatch = mockedRecipe.match(/^(.+?)\n/);
+        const imagePrompt = titleMatch ? titleMatch[1].trim() : `A dish made with ${ingredients}`;
+        
         const imageRes = await fetch('/api/generateImage', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ prompt: imagePrompt }),
         });
+        
+        let imageData;
 
-        const imageData = await imageRes.json();
-        if (!imageRes.ok) throw new Error(imageData.error || 'Image generation failed');
-
-        setImageUrl(imageData.imageUrl);
-      } catch (err: unknown) {
-        if (err instanceof Error) {
-          setError(err.message);
-        } else {
-          setError('Image generation failed.');
+        try {
+          imageData = await imageRes.clone().json(); // clone() allows body to be read again
+        } catch (err) {
+          const fallbackText = await imageRes.text();
+          console.error('Failed to parse JSON:', err);
+          console.error('Raw response body:', fallbackText);
+          throw new Error(`Image API returned invalid JSON: ${fallbackText}`);
         }
-        setLoading(false);
-        return;
+
+        if (!imageRes.ok) {
+          throw new Error(imageData?.error || 'Image generation failed');
+        }
+
+        
+        setImageUrl(imageData.imageUrl);
       }
-    }
-
-    // Step 2: Generate recipe
-    try {
-      const recipeRes = await fetch('/api/recipe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ingredients }),
-      });
-
-      const recipeData = await recipeRes.json();
-      if (!recipeRes.ok) throw new Error(recipeData.error || 'Recipe generation failed');
-
-      setRecipe(recipeData.result);
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
       } else {
-        setError('Recipe generation failed.');
+        setError('An unknown error occurred.');
       }
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
