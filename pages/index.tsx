@@ -18,30 +18,24 @@ export default function Home() {
 
     try {
       // Get recipe from ChatGPT
-      // const recipeRes = await fetch('/api/recipe', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ ingredients }),
-      // });
+      const recipeRes = await fetch('/api/recipe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ingredients }),
+      });
 
-      // const recipeData = await recipeRes.json();
-      // if (!recipeRes.ok) throw new Error(recipeData.error || 'Recipe generation failed');
+      const recipeData = await recipeRes.json();
+      if (!recipeRes.ok) throw new Error(recipeData.error || 'Recipe generation failed');
 
-      // const resultText = recipeData.result;
-      // setRecipe(resultText);
-
-      const mockedRecipe = `1. Delicious Tuna Melt Sandwich\n\nIngredients:\n- Tuna\n- Cheese\n- Bread\n- Tomato\n- Lettuce\n\nInstructions:\nMix and toast.`;
-      setRecipe(mockedRecipe);
+      const resultText = recipeData.result;
+      setRecipe(resultText);
 
       // If checkbox is checked, generate image
       if (generateImage) {
-        // const titleMatch = resultText.match(/^(.+?)\n/); // Get first line as title
-        // const imagePrompt = titleMatch ? titleMatch[1].trim() : `A dish made with ${ingredients}`;
-        // console.log("Image Prompt: ", imagePrompt);
-
-        const titleMatch = mockedRecipe.match(/^(.+?)\n/);
+        const titleMatch = resultText.match(/^(.+?)\n/); // Get first line as title
         const imagePrompt = titleMatch ? titleMatch[1].trim() : `A dish made with ${ingredients}`;
-        
+        console.log("Image Prompt: ", imagePrompt);
+
         const imageRes = await fetch('/api/generateImage', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
