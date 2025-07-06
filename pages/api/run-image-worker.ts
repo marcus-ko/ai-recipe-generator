@@ -1,17 +1,25 @@
-// pages/api/run-image-worker.ts
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { Redis } from '@upstash/redis'
 
 const redis = Redis.fromEnv()
 
-export default async function handler(_: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const authHeader = req.headers.authorization
+  const expectedSecret = `Bearer ${process.env.CRON_SECRET}`
+
+  if (authHeader !== expectedSecret) {
+    return res.status(401).json({ error: 'Unauthorized' })
+  }
+
   try {
     const keys = await redis.keys('image-job:*')
     let processed = 0
 
     for (const key of keys) {
       const job = await redis.hgetall(key)
+
       if (!job || job.status !== 'pending') continue
+
       if (!job.prompt || typeof job.prompt !== 'string') {
         await redis.hset(key, { status: 'error', error: 'Invalid or missing prompt' })
         continue
@@ -45,6 +53,7 @@ export default async function handler(_: NextApiRequest, res: NextApiResponse) {
         } else {
           await redis.hset(key, { status: 'error', error: 'Image not generated' })
         }
+
         processed++
       } catch (err) {
         console.error('Image generation failed:', err)
